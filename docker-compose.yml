@@ -1,0 +1,78 @@
+services:
+  frontendunigrande:
+    build: ./frontendunigrande
+    ports:
+      - "8090:80"
+    environment:
+      APP_ENV: ${APP_ENV}
+      BASE_URL: ${BASE_URL}
+      DIRETORIO_DOCS_FRONT: ${DIRETORIO_DOCS_FRONT}
+    env_file:
+      - .env
+    volumes:
+      - ./frontendunigrande:/var/www/unigrande/frontendunigrande
+    restart: no
+    container_name: frontendunigrande
+    networks:
+      - unigrande-network
+
+  backendunigrande:
+    build: ./backendunigrande
+    command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 5000
+    ports:
+      - "5015:5000"
+    volumes:
+      - ./backendunigrande:/usr/src/app
+    restart: no
+    container_name: backendunigrande
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT}
+      TESTING: ${TESTING}
+      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_TEST_URL: ${DATABASE_TEST_URL}
+      DIRETORIO_DOCS: ${DIRETORIO_DOCS}
+    env_file:
+      - .env
+    depends_on:
+      - dbunigrande
+    networks:
+      - unigrande-network
+
+  dbunigrande:
+    build:
+      context: ./backendunigrande/db
+      dockerfile: Dockerfile
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_DB_TEST: ${POSTGRES_DB_TEST}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5431:5432"
+    restart: no
+    container_name: dbunigrande
+    networks:
+      - unigrande-network
+
+  pgadminunigrande:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5051:80"
+    restart: no
+    container_name: pgadminunigrande
+    networks:
+      - unigrande-network
+      
+volumes:
+  postgres_data:
+
+networks:
+  unigrande-network:
+    driver: bridge
